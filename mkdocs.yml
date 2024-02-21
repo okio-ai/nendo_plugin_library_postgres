@@ -1,0 +1,6 @@
+
+site_name: nendo_plugin_library_postgres
+
+nav:
+    - "index.md"
+    - Configuration: "config.md"

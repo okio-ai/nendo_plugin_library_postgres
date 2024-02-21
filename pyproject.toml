@@ -1,0 +1,165 @@
+[tool.poetry]
+name = "nendo_plugin_library_postgres"
+version = "0.1.0"
+authors = [
+  "Okio Team <team@okio.ai>",
+]
+description = "PostgresDB implementation of the Nendo Library plugin. Comes with support for track embeddings."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/okio-ai/nendo_plugin_library_postgres"
+homepage = "https://okio.ai"
+keywords = [
+  "nendo",
+  "AI",
+  "Machine Learning",
+  "Audio",
+  "Generative",
+  "Library",
+  "Plugin",
+]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+]
+
+[tool.poetry.dependencies]
+python = "^3.8,<3.11"
+pydantic = { version = "^2.0.0, <2.5.0" }
+nendo = "^0.2.0"
+asyncpg = "^0.28.0"
+google-cloud-storage = "^2.12.0"
+numpy = "^1.20"
+psycopg2 = "^2.9.9"
+sqlalchemy = "^2.0.25"
+sqlalchemy-json = "^0.7.0"
+pgvector = "^0.2.4"
+
+[tool.poetry.group.lint.dependencies]
+black = "^23.1.0"
+ruff = "^0.0.263"
+
+[tool.ruff]
+src = ["src"]
+select = [
+    "A",
+    # "ANN", # flake8-annotations
+    "ARG",
+    "B",
+    "BLE",
+    "C",
+    "C4",
+    "COM",
+    "D",
+    "DTZ",
+    "E",
+    "ERA",
+    "EXE",
+    "F",
+    # "FBT", # flake8-boolean-trap
+    "G",
+    "I", # Isort
+    "ICN",
+    "INP",
+    "ISC",
+    "N",
+    "PGH",
+    "PIE",
+    "PL",
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
+    # "PT", # flake8-pytest-style
+    "PYI",
+    "Q",
+    "RUF",
+    "RSE",
+    "RET",
+    "S",
+    "SIM",
+    "SLF",
+    "T",
+    "T10",
+    "T20",
+    "TCH",
+    "TID",
+    # "TRY", # tryceratops
+    # "UP", # pyupgrade
+    "W",
+    "YTT",
+]
+ignore = [
+  "A001",  # Variable is shadowing a Python builtin
+  "ANN101",  # Missing type annotation for self
+  "ANN102",  # Missing type annotation for cls
+  "ANN204",  # Missing return type annotation for special method __str__
+  "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
+  "ARG005",  # Unused lambda argument
+  "C901",  # Too complex
+  "D105",  # Missing docstring in magic method
+  "D417",  # Missing argument description in the docstring
+  "E501",  # Line too long
+  "ERA001",  # Commented out code
+  "G004",  # Logging statement uses f-string
+  "PLR0911",  # Too many return statements
+  "PLR0912",  # Too many branches
+  "PLR0913",  # Too many arguments to function call
+  "PLR0915",  # Too many statements
+  "SLF001", # Private member accessed
+  "TRY003",  # Avoid specifying long messages outside the exception class
+]
+fixable = [
+    "F401", # Remove unused imports.
+    "NPY001", # Fix numpy types, which are removed in 1.24.
+]
+unfixable = ["B"]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+# Same as Black.
+line-length = 88
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+# Assume Python 3.10.
+target-version = "py310"
+
+[tool.ruff.mccabe]
+max-complexity = 10
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+setuptools = "^67.6.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
