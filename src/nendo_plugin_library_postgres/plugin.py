@@ -8,8 +8,9 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
-from sqlalchemy import Engine, MetaData, and_, create_engine, text
-from sqlalchemy.orm import Query, Session, declarative_base
+from sqlalchemy import Engine, and_, create_engine, text
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Query, Session
 from sqlalchemy.orm.exc import NoResultFound
 
 from nendo import (
@@ -92,7 +93,10 @@ class PostgresDBLibrary(SqlAlchemyNendoLibrary, NendoLibraryVectorExtension):
             f"{self.plugin_config.postgres_db}"
         )
         self.db = db or create_engine(engine_string)
-        Base.metadata.create_all(bind=self.db)
+        try:
+            Base.metadata.create_all(bind=self.db)
+        except IntegrityError as e:
+            logger.error(f"Failed to initialize database: {e}")            
         # if user_id is not None:
         #     with self.session_scope() as session:
         #         db_user = (
