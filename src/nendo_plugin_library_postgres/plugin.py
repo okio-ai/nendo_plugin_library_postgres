@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
-from sqlalchemy import Engine, and_, create_engine, text
+from sqlalchemy import Engine, and_, asc, create_engine, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session
 from sqlalchemy.orm.exc import NoResultFound
@@ -539,7 +539,7 @@ class PostgresDBLibrary(SqlAlchemyNendoLibrary, NendoLibraryVectorExtension):
                 query=query,
                 search_meta=search_meta,
             )
-            query = query.limit(limit)
+            query = query.order_by(asc("distance")).limit(limit)
             if offset:
                 query = query.offset(offset)
             query = query.all()
