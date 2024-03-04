@@ -205,7 +205,7 @@ class PostgresDBLibrary(SqlAlchemyNendoLibrary, NendoLibraryVectorExtension):
             remove_embeddings: bool = True,
             user_id: Optional[Union[str, uuid.UUID]] = None,
     ) -> bool:
-        embeddings = self.get_embeddings(track_id=track_id)
+        embeddings = self.get_embeddings(track_id=ensure_uuid(track_id))
         if len(embeddings) > 0:
             if remove_embeddings:
                 with self.session_scope() as session:
@@ -748,8 +748,8 @@ class PostgresDBLibrary(SqlAlchemyNendoLibrary, NendoLibraryVectorExtension):
                 session=session,
                 vec=vec,
                 user_id=user_id,
-                embedding_name=embedding_name,
-                embedding_version=embedding_version,
+                embedding_name=plugin_name,
+                embedding_version=plugin_version,
                 distance_metric=distance_metric,
             )
             query = self._get_filtered_tracks_query(

@@ -92,7 +92,7 @@ class EmbeddingExtensionTests(unittest.TestCase):
         saved_embedding.user_id = new_user_id
         saved_embedding.plugin_version="1.1"
         saved_embedding.text="Updated Test"
-        saved_embedding.embedding=np.arange(20)
+        saved_embedding.embedding=np.arange(10)
         updated_embedding = nd.library.update_embedding(embedding=saved_embedding)
         retrieved_embedding = nd.library.get_embedding(
             embedding_id=updated_embedding.id,
@@ -115,10 +115,10 @@ class EmbeddingExtensionTests(unittest.TestCase):
         )
         self.assertEqual(
             len(retrieved_embedding.embedding),
-            20,
+            10,
         )
         self.assertTrue(
-            (retrieved_embedding.embedding == np.arange(20)).all(),
+            (retrieved_embedding.embedding == np.arange(10)).all(),
         )
 
     def test_remove_embedding_removes_embedding(self):
@@ -276,10 +276,7 @@ class EmbeddingExtensionTests(unittest.TestCase):
         nd.library.add_embedding(embedding=test_embedding_3)
         num_nearest_by_track = nd.library.count_nearest_by_track(
             track=track,
-            filters={},
-            search_meta={},
-            track_type=None,
-            collection_id=None,
+            embedding_name="nendo_plugin_embed_clap",
         )
         self.assertEqual(num_nearest_by_track, 2)
 
