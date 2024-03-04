@@ -10,7 +10,7 @@ import numpy as np
 import numpy.typing as npt
 from sqlalchemy import Engine, and_, asc, create_engine, text
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Query, Session
+from sqlalchemy.orm import noload, Query, Session
 from sqlalchemy.orm.exc import NoResultFound
 
 from nendo import (
@@ -266,6 +266,7 @@ class PostgresDBLibrary(SqlAlchemyNendoLibrary, NendoLibraryVectorExtension):
             order (str, optional): Ordering ("asc" vs "desc"). Defaults to "asc".
             limit (int, optional): Limit the number of returned results.
             offset (int, optional): Offset into the paginated results (requires limit).
+            session (sqlalchemy.orm.Session, optional): The database session.
 
         Returns:
             Union[List, Iterator]: List or generator of tracks, depending on the
@@ -274,7 +275,7 @@ class PostgresDBLibrary(SqlAlchemyNendoLibrary, NendoLibraryVectorExtension):
         user_id = self._ensure_user_uuid(user_id)
         s = session or self.session_scope()
         with s as session_local:
-            """Obtain tracks from the db by filtering w.r.t. various fields."""
+            # Obtain tracks from the db by filtering w.r.t. various fields.
             query = self._get_filtered_tracks_query(
                 session=session_local,
                 filters=filters,
@@ -297,6 +298,59 @@ class PostgresDBLibrary(SqlAlchemyNendoLibrary, NendoLibraryVectorExtension):
                 load_related_tracks=False,
                 session=session_local,
             )
+    
+    def count_filtered_tracks_by_meta(
+        self,
+        filters: Optional[Dict[str, Any]] = None,
+        search_meta: Optional[Dict[str, List[str]]] = None,
+        track_type: Optional[Union[str, List[str]]] = None,
+        user_id: Optional[Union[str, uuid.UUID]] = None,
+        collection_id: Optional[Union[str, uuid.UUID]] = None,
+        plugin_names: Optional[List[str]] = None,
+        session: Optional[Session] = None,
+    ) -> int:
+        """Count the number of tracks in the db after applying various filter criteria.
+
+        Args:
+            filters (Optional[dict]): Dictionary containing the filters to apply.
+                Defaults to None.
+            search_meta (dict, optional): Dictionary containing separate track.meta filters
+                which will be applied in conjunction. The keys of the dictionary should
+                correspond to potential field names in track.meta and the values should
+                contain the string values which should be contained in the respective
+                `track.meta` field's value.
+            track_type (Union[str, List[str]], optional): Track type to filter for.
+                Can be a singular type or a list of types. Defaults to None.
+            user_id (Union[str, UUID], optional): The user ID to filter for.
+            collection_id (Union[str, uuid.UUID], optional): Collection id to
+                which the filtered tracks must have a relationship. Defaults to None.
+            plugin_names (list, optional): List used for applying the filter only to
+                data of certain plugins. If None, all plugin data related to the track
+                is used for filtering.
+            session (sqlalchemy.orm.Session, optional): The database session.
+
+        Returns:
+            int: Number of tracks in the library that match the specified criteria.
+        """
+        user_id = self._ensure_user_uuid(user_id)
+        s = session or self.session_scope()
+        with s as session_local:
+            query = self._get_filtered_tracks_query(
+                session=session_local,
+                filters=filters,
+                search_meta=[],
+                track_type=track_type,
+                user_id=user_id,
+                collection_id=collection_id,
+                plugin_names=plugin_names,
+            )
+            query = self._get_meta_filter_query(
+                query=query,
+                search_meta=search_meta,
+            )
+            query = query.options(noload("*"))
+            return query.count()
+        
 
     def filter_related_tracks_by_meta(
         self,
@@ -372,6 +426,68 @@ class PostgresDBLibrary(SqlAlchemyNendoLibrary, NendoLibraryVectorExtension):
                 load_related_tracks=True,
                 session=session,
             )
+            
+    def count_filtered_related_tracks_by_meta(
+        self,
+        track_id: Union[str, uuid.UUID],
+        direction: str = "to",
+        filters: Optional[Dict[str, Any]] = None,
+        search_meta: Optional[Dict[str, List[str]]] = None,
+        track_type: Optional[Union[str, List[str]]] = None,
+        user_id: Optional[Union[str, uuid.UUID]] = None,
+        collection_id: Optional[Union[str, uuid.UUID]] = None,
+        plugin_names: Optional[List[str]] = None,
+        session: Optional[Session] = None,
+    ) -> int:
+        """Count the number of tracks in the db after applying various filter criteria.
+
+        Args:
+            track_id (Union[str, UUID]): ID of the track to be searched for.
+            direction (str, optional): The relationship direction ("to", "from", "both").
+            filters (Optional[dict]): Dictionary containing the filters to apply.
+                Defaults to None.
+            search_meta (dict, optional): Dictionary containing separate track.meta filters
+                which will be applied in conjunction. The keys of the dictionary should
+                correspond to potential field names in track.meta and the values should
+                contain the string values which should be contained in the respective
+                `track.meta` field's value.
+            track_type (Union[str, List[str]], optional): Track type to filter for.
+                Can be a singular type or a list of types. Defaults to None.
+            user_id (Union[str, UUID], optional): The user ID to filter for.
+            collection_id (Union[str, uuid.UUID], optional): Collection id to
+                which the filtered tracks must have a relationship. Defaults to None.
+            plugin_names (list, optional): List used for applying the filter only to
+                data of certain plugins. If None, all plugin data related to the track
+                is used for filtering.
+            session (sqlalchemy.orm.Session, optional): The database session.
+
+        Returns:
+            int: Number of tracks in the library that match the specified criteria.
+        """
+        user_id = self._ensure_user_uuid(user_id)
+        with self.session_scope() as session:
+            query = self._get_related_tracks_query(
+                track_id=ensure_uuid(track_id),
+                session=session,
+                user_id=user_id,
+                direction=direction,
+            )
+            query = self._get_filtered_tracks_query(
+                session=session,
+                query=query,
+                filters=filters,
+                search_meta=[],
+                track_type=track_type,
+                user_id=user_id,
+                collection_id=collection_id,
+                plugin_names=plugin_names,
+            )
+            query = self._get_meta_filter_query(
+                query=query,
+                search_meta=search_meta,
+            )
+            query = query.options(noload("*"))
+            return query.count()
 
     def add_embedding(
             self,

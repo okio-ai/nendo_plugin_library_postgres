@@ -5,14 +5,11 @@ from nendo import (
     NendoCollection,
     NendoConfig,
     NendoTrack,
-    NendoTrackSlim,
 )
 
 from types import GeneratorType
-import json
 import os
 import unittest
-from google.cloud import storage
 
 nd = Nendo(
     config=NendoConfig(
@@ -777,6 +774,40 @@ class PostgresLibraryTests(unittest.TestCase):
             ),
             False,
         )
+        
+    def test_counting_filtered_tracks(self):
+        """Test the `nd.library.verify()` method."""
+        nd.library.reset(force=True)
+        test_track_1 = nd.library.add_track(file_path="tests/assets/test.mp3")
+        nd.library.add_track(file_path="tests/assets/test.wav")
+        test_track_1.set_meta({
+            "title": "Thriller",
+        })
+
+        count = nd.library.count_filtered_tracks_by_meta(search_meta={"": "test"})
+        self.assertEqual(count, 2)
+        count = nd.library.count_filtered_tracks_by_meta(search_meta={"title": "Thriller"})
+        self.assertEqual(count, 1)
+        
+    def test_counting_filtered_related_tracks(self):
+        """Test the `nd.library.verify()` method."""
+        nd.library.reset(force=True)
+        test_track_1 = nd.library.add_track(file_path="tests/assets/test.mp3")
+        test_track_2 = nd.library.add_related_track(
+            file_path="tests/assets/test.wav",
+            related_track_id=test_track_1.id,
+        )
+        test_track_2.set_meta({
+            "title": "Thriller",
+        })
+        self.assertEqual(len(nd.library), 2)
+        count = nd.library.count_filtered_related_tracks_by_meta(
+            track_id=test_track_1.id,
+            direction="to",
+            search_meta={"title": "Thriller"}
+        )
+        self.assertEqual(count, 1)
+        
 
 
 if __name__ == "__main__":
