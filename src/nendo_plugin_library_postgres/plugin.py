@@ -664,3 +664,108 @@ class PostgresDBLibrary(SqlAlchemyNendoLibrary, NendoLibraryVectorExtension):
                 (NendoTrack.model_validate(embedding.track), distance)
                 for embedding, distance in query
             ]
+    
+    def count_nearest_by_track(
+        self,
+        track: NendoTrack,
+        filters: Optional[Dict[str, Any]] = None,
+        search_meta: Optional[Dict[str, List[str]]] = None,
+        track_type: Optional[Union[str, List[str]]] = None,
+        user_id: Optional[Union[str, uuid.UUID]] = None,
+        collection_id: Optional[Union[str, uuid.UUID]] = None,
+        plugin_names: Optional[List[str]] = None,
+        embedding_name: Optional[str] = None,
+        embedding_version: Optional[str] = None,
+        distance_metric: Optional[DistanceMetric] = None,
+        session: Optional[Session] = None,
+    ) -> int:
+        """Count the number of tracks in the db after applying various filter criteria.
+
+        Args:
+            track (NendoTrack): The track from which to start the neighbor search.
+            filters (Optional[dict]): Dictionary containing the filters to apply.
+                Defaults to None.
+            search_meta (dict): Dictionary containing the keywords to search for
+                over the track.resource.meta field. The dictionary's values
+                should contain singular search tokens and the keys currently have no
+                effect but might in the future. Defaults to {}.
+            track_type (Union[str, List[str]], optional): Track type to filter for.
+                Can be a singular type or a list of types. Defaults to None.
+            user_id (Union[str, UUID], optional): The user ID to filter for.
+            collection_id (Union[str, uuid.UUID], optional): Collection id to
+                which the filtered tracks must have a relationship. Defaults to None.
+            plugin_names (list, optional): List used for applying the filter only to
+                data of certain plugins. If None, all plugin data related to the track
+                is used for filtering.
+            embedding_name (str, optional): Name of the embedding plugin for which to
+                retrieve and compare the vectors. If none is given, the name of the
+                first embedding found for that track is used. If no embedding exists,
+                the name of the currently configured embedding plugin for the library
+                vector extension is used.
+            embedding_version (str, optional): Version of the embedding plugin for
+                which to retrieve and compare the vectors. If none is given, the name
+                of the first embedding found for that track is used. If no embedding
+                exists,the version of the currently configured embedding plugin for
+                the library vector extension is used.
+            session (sqlalchemy.orm.Session, optional): The database session.
+
+        Returns:
+            int: Number of tracks in the library that match the specified criteria.
+        """
+        user_id = self._ensure_user_uuid(user_id)
+        plugin_name = (
+            embedding_name
+            if embedding_name is not None
+            else (
+                self.embedding_plugin.plugin_name
+                if self.embedding_plugin is not None
+                else None
+            )
+        )
+        plugin_version = (
+            embedding_version
+            if embedding_version is not None
+            else (
+                self.embedding_plugin.plugin_version
+                if self.embedding_plugin is not None
+                else None
+            )
+        )
+        track_embeddings = self.get_embeddings(
+            track_id=track.id,
+            plugin_name=plugin_name,
+            plugin_version=plugin_version,
+        )
+        if len(track_embeddings) < 1:
+            track_embedding = self.embed_track(track)
+        else:
+            track_embedding = track_embeddings[0]
+            plugin_name = track_embedding.plugin_name
+            plugin_version = track_embedding.plugin_version
+        vec = track_embedding.embedding.astype(np.float32)
+        with self.session_scope() as session:
+            query = self._get_nearest_query(
+                session=session,
+                vec=vec,
+                user_id=user_id,
+                embedding_name=embedding_name,
+                embedding_version=embedding_version,
+                distance_metric=distance_metric,
+            )
+            query = self._get_filtered_tracks_query(
+                session=session,
+                query=query,
+                filters=filters,
+                search_meta=[],
+                track_type=track_type,
+                user_id=user_id,
+                collection_id=collection_id,
+                plugin_names=plugin_names,
+            )
+            query = self._get_meta_filter_query(
+                query=query,
+                search_meta=search_meta,
+            )
+            query = query.order_by(asc("distance"))
+            count = query.count()
+            return count - 1 # -1 because the track itself will also be returned

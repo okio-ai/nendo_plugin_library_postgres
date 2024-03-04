@@ -240,6 +240,48 @@ class EmbeddingExtensionTests(unittest.TestCase):
             collection_id=None,
         )
         self.assertEqual(len(nearest_by_track), 0)
+    
+    def test_count_nearest_by_track(self):
+        nd.library.reset(force=True)
+        track = nd.library.add_track(
+            file_path="tests/assets/test.mp3",
+            meta={"test_key": "test_value"},
+        )
+        test_embedding_1 = NendoEmbeddingCreate(
+            track_id = track.id,
+            user_id=nd.library.user.id,
+            plugin_name="nendo_plugin_embed_clap",
+            plugin_version="0.1.0",
+            text="Test",
+            embedding=np.array([1,1,1]),
+        )
+        nd.library.add_embedding(embedding=test_embedding_1)
+        test_embedding_2 = NendoEmbeddingCreate(
+            track_id = track.id,
+            user_id=nd.library.user.id,
+            plugin_name="nendo_plugin_embed_clap",
+            plugin_version="0.1.0",
+            text="Test2",
+            embedding=np.array([1,1,0]),
+        )
+        nd.library.add_embedding(embedding=test_embedding_2)
+        test_embedding_3 = NendoEmbeddingCreate(
+            track_id = track.id,
+            user_id=nd.library.user.id,
+            plugin_name="nendo_plugin_embed_clap",
+            plugin_version="0.1.0",
+            text="Test3",
+            embedding=np.array([1,0,0]),
+        )
+        nd.library.add_embedding(embedding=test_embedding_3)
+        num_nearest_by_track = nd.library.count_nearest_by_track(
+            track=track,
+            filters={},
+            search_meta={},
+            track_type=None,
+            collection_id=None,
+        )
+        self.assertEqual(num_nearest_by_track, 2)
 
 
 if __name__ == "__main__":
